@@ -1,26 +1,37 @@
-import { AlertTriangle, Package, ArrowRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { AlertTriangle, Package } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import type { ProductStockAlert } from '@/types'
+import type { Product } from '@/types'
 
 interface LowStockAlertsProps {
-  products: ProductStockAlert[]
+  products: Product[]
 }
 
 export function LowStockAlerts({ products }: LowStockAlertsProps) {
-  if (products.length === 0) {
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+    }).format(value)
+
+  // Ordenar por cantidad de stock (menor primero)
+  const sortedProducts = [...products].sort((a, b) => a.totalInventory - b.totalInventory)
+
+  if (sortedProducts.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Alertas de Stock</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            Alertas de Stock
+          </CardTitle>
           <CardDescription>
             Productos con stock bajo
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-center py-6">
-          <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+        <CardContent className="text-center py-8">
+          <Package className="h-12 w-12 text-muted-foreground mx-auto mb-2 opacity-50" />
           <p className="text-sm text-muted-foreground">
             Todos los productos tienen stock suficiente
           </p>
@@ -30,99 +41,81 @@ export function LowStockAlerts({ products }: LowStockAlertsProps) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-              Alertas de Stock
-            </CardTitle>
-            <CardDescription>
-              {products.length} producto(s) requieren atención
-            </CardDescription>
-          </div>
-          <Button variant="outline" size="sm">
-            Ver Todo
-            <ArrowRight className="h-3 w-3 ml-1" />
-          </Button>
-        </div>
+    <Card className="border-orange-200 bg-orange-50/30">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-orange-700">
+          <AlertTriangle className="h-5 w-5" />
+          Alertas de Stock Bajo
+        </CardTitle>
+        <CardDescription>
+          {products.length} productos necesitan reposición urgente
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {products.map((product) => {
-          const stockPercentage = (product.currentStock / product.minimumStock) * 100
-          const isOutOfStock = product.currentStock === 0
-          const isCriticallyLow = product.currentStock <= Math.ceil(product.minimumStock * 0.3)
-
+      <CardContent className="space-y-3">
+        {sortedProducts.slice(0, 6).map((product) => {
+          const primaryImage = product.images?.find(img => img.isPrimary) || product.images?.[0]
+          const isCritical = product.totalInventory <= 2
+          
           return (
-            <div key={product.productId} className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium leading-none">
+            <div 
+              key={product.id} 
+              className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                isCritical 
+                  ? 'bg-red-50 border-red-200 hover:border-red-300' 
+                  : 'bg-white border-orange-200 hover:border-orange-300'
+              }`}
+            >
+              <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                {primaryImage ? (
+                  <img 
+                    src={primaryImage.url} 
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Package className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium leading-tight truncate">
                       {product.name}
                     </p>
-                    {isOutOfStock && (
-                      <Badge variant="destructive" className="text-xs">
-                        Agotado
-                      </Badge>
-                    )}
-                    {!isOutOfStock && isCriticallyLow && (
-                      <Badge variant="destructive" className="text-xs">
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formatCurrency(product.basePrice || 0)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge 
+                      variant={isCritical ? "destructive" : "secondary"}
+                      className={isCritical ? "" : "bg-orange-100 text-orange-700 border-orange-200"}
+                    >
+                      {product.totalInventory} {product.totalInventory === 1 ? 'unidad' : 'unidades'}
+                    </Badge>
+                    {isCritical && (
+                      <span className="text-xs text-red-600 font-medium flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
                         Crítico
-                      </Badge>
-                    )}
-                    {!isOutOfStock && !isCriticallyLow && (
-                      <Badge variant="secondary" className="text-xs">
-                        Bajo
-                      </Badge>
+                      </span>
                     )}
                   </div>
-                  {product.variantDetails && (
-                    <p className="text-xs text-muted-foreground">
-                      {product.variantDetails}
-                    </p>
-                  )}
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">
-                    {product.currentStock} / {product.minimumStock}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    unidades
-                  </p>
-                </div>
-              </div>
-
-              <Progress 
-                value={Math.min(stockPercentage, 100)} 
-                className={`h-2 ${
-                  isOutOfStock 
-                    ? '[&>div]:bg-red-500' 
-                    : isCriticallyLow 
-                    ? '[&>div]:bg-orange-500' 
-                    : '[&>div]:bg-yellow-500'
-                }`}
-              />
-
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Stock actual</span>
-                <span>Mínimo requerido: {product.minimumStock}</span>
               </div>
             </div>
           )
         })}
-
-        <div className="pt-2 border-t">
-          <div className="flex gap-2">
-            <Button size="sm" className="flex-1">
-              Reabastecer Todos
-            </Button>
-            <Button size="sm" variant="outline" className="flex-1">
-              Generar Orden
-            </Button>
+        
+        {sortedProducts.length > 6 && (
+          <div className="text-center pt-2 border-t">
+            <p className="text-sm text-muted-foreground">
+              +{sortedProducts.length - 6} productos más con stock bajo
+            </p>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   )

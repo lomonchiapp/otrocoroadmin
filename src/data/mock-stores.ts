@@ -1,10 +1,10 @@
 // Datos mock para tiendas y usuarios admin
-import type { Store, AdminUser, StoreAccess } from '@/types'
+import type { Store, AdminUser } from '@/types'
 
 export const mockStores: Store[] = [
   {
     id: 'store-fashion-001',
-    name: 'Otrocoro Fashion',
+    name: 'Otro Coro Fashion',
     type: 'fashion',
     slug: 'otrocoro-fashion',
     description: 'Tu destino para la moda contemporánea y elegante',
@@ -71,15 +71,15 @@ export const mockStores: Store[] = [
   },
   {
     id: 'store-jewelry-001',
-    name: 'Otrocoro Joyería',
+    name: 'Otro Coro Oro',
     type: 'jewelry',
-    slug: 'otrocoro-joyeria',
-    description: 'Joyería fina en oro y piedras preciosas',
+    slug: 'otrocoro-oro',
+    description: 'Joyería de prestigio y elegancia',
     logo: '/logo.png',
-    primaryColor: '#F59E0B',
-    secondaryColor: '#FCD34D',
+    primaryColor: '#D4AF37',
+    secondaryColor: '#FFD700',
     currency: 'COP',
-    isActive: false, // En desarrollo
+    isActive: true, // Activo para desarrollo
     settings: {
       allowBackorders: false,
       trackInventory: true,
@@ -122,7 +122,7 @@ export const mockStores: Store[] = [
         emailOnLowStock: true,
         emailOnOutOfStock: true,
         smsNotifications: true,
-        webhookUrl: 'https://api.otrocorojoyeria.com/webhooks',
+        webhookUrl: 'https://api.otrocorooro.com/webhooks',
       },
     },
     createdAt: new Date('2024-11-01'),
@@ -201,29 +201,41 @@ export const mockAdminUsers: AdminUser[] = [
 export const initializeMockData = () => {
   // Solo inicializar en desarrollo
   if (import.meta.env.MODE === 'development') {
-    const existingStores = localStorage.getItem('otrocoro-admin-store-state')
+    // Limpiar datos antiguos para evitar duplicados
+    localStorage.removeItem('otrocoro-admin-store-state')
+    localStorage.removeItem('otrocoro-admin-current-store')
     
-    if (!existingStores) {
-      // Establecer tienda por defecto
-      localStorage.setItem(
-        'otrocoro-admin-current-store', 
-        JSON.stringify(mockStores[0])
-      )
-      
-      // Establecer datos iniciales
-      const initialState = {
-        currentStore: mockStores[0],
-        availableStores: mockStores,
-        user: mockAdminUsers[0],
-        permissions: mockAdminUsers[0].storeAccess[0].permissions,
-      }
-      
-      localStorage.setItem(
-        'otrocoro-admin-store-state',
-        JSON.stringify({ state: initialState })
-      )
+    console.log('🧹 Limpiando datos de localStorage para evitar duplicados')
+    console.log('📦 Inicializando con stores:', mockStores.map(s => ({ id: s.id, name: s.name })))
+    
+    // Establecer tienda por defecto
+    localStorage.setItem(
+      'otrocoro-admin-current-store', 
+      JSON.stringify(mockStores[0])
+    )
+    
+    // Establecer datos iniciales
+    const initialState = {
+      currentStore: mockStores[0],
+      availableStores: mockStores,
+      user: mockAdminUsers[0],
+      permissions: mockAdminUsers[0].storeAccess[0].permissions,
     }
+    
+    localStorage.setItem(
+      'otrocoro-admin-store-state',
+      JSON.stringify({ state: initialState })
+    )
+    
+    console.log('✅ Datos mock inicializados correctamente')
   }
+}
+
+// Función para limpiar completamente el estado
+export const clearStoreState = () => {
+  localStorage.removeItem('otrocoro-admin-store-state')
+  localStorage.removeItem('otrocoro-admin-current-store')
+  console.log('🗑️ Estado de stores completamente limpiado')
 }
 
 // Datos de ejemplo para dashboard metrics

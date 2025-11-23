@@ -1,23 +1,14 @@
 import {
-  Construction,
   LayoutDashboard,
-  Monitor,
-  Bug,
-  FileX,
   HelpCircle,
-  Lock,
   Bell,
   Package,
   Palette,
-  ServerOff,
   Settings,
   Wrench,
   UserCog,
-  UserX,
   Users,
-  MessagesSquare,
   ShieldCheck,
-  AudioWaveform,
   Command,
   GalleryVerticalEnd,
   ShoppingCart,
@@ -34,8 +25,8 @@ import {
   UserCheck,
   MessageCircle,
   Store,
+  PackageOpen,
 } from 'lucide-react'
-import { ClerkLogo } from '@/assets/clerk-logo'
 import { type SidebarData } from '../types'
 
 export const sidebarData: SidebarData = {
@@ -46,19 +37,14 @@ export const sidebarData: SidebarData = {
   },
   teams: [
     {
-      name: 'Otrocoro Fashion',
+      name: 'Otro Coro Fashion',
       logo: Package,
       plan: 'Tienda de Moda',
     },
     {
-      name: 'Otrocoro Joyería', 
+      name: 'Otro Coro Oro', 
       logo: GalleryVerticalEnd,
-      plan: 'Joyería en Oro (Próximamente)',
-    },
-    {
-      name: 'Otrocoro Admin',
-      logo: Command,
-      plan: 'Panel Administrativo Central',
+      plan: 'Joyería de Prestigio',
     },
   ],
   navGroups: [
@@ -72,13 +58,12 @@ export const sidebarData: SidebarData = {
         },
         {
           title: 'Órdenes',
-          url: '/orders',
           icon: ShoppingCart,
           badge: 'nuevo',
           items: [
             {
               title: 'Todas las Órdenes',
-              url: '/orders/all',
+              url: '/orders',
             },
             {
               title: 'Pendientes',
@@ -100,38 +85,34 @@ export const sidebarData: SidebarData = {
         },
         {
           title: 'Productos',
-          url: '/products',
           icon: Package2,
           items: [
             {
               title: 'Todos los Productos',
-              url: '/products/all',
+              url: '/products',
             },
             {
-              title: 'Ropa',
-              url: '/products/clothing',
-            },
-            {
-              title: 'Joyería',
-              url: '/products/jewelry',
+              title: 'Atributos',
+              url: '/attributes',
+              icon: Tags,
             },
             {
               title: 'Categorías',
-              url: '/products/categories',
+              url: '/categories',
             },
             {
               title: 'Marcas',
-              url: '/products/brands',
+              url: '/brands',
             },
             {
-              title: 'Colecciones',
-              url: '/products/collections',
+              title: 'Combos',
+              url: '/bundles',
+              icon: PackageOpen,
             },
           ],
         },
         {
           title: 'Inventario',
-          url: '/inventory',
           icon: Warehouse,
           items: [
             {
@@ -154,12 +135,11 @@ export const sidebarData: SidebarData = {
         },
         {
           title: 'Clientes',
-          url: '/customers',
           icon: Users,
           items: [
             {
               title: 'Todos los Clientes',
-              url: '/customers/all',
+              url: '/customers',
             },
             {
               title: 'VIP',
@@ -308,12 +288,11 @@ export const sidebarData: SidebarData = {
         },
         {
           title: 'Soporte',
-          url: '/support',
           icon: HelpCircle,
           items: [
             {
               title: 'Centro de Ayuda',
-              url: '/support/help',
+              url: '/support',
             },
             {
               title: 'Contactar Soporte',

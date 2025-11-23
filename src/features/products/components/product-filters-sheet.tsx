@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Filter, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,10 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
-import type { ProductFilters, StoreType } from '@/types'
+import { useCurrentStore } from '@/stores/store-store'
+import { attributeService } from '@/services/attributeService'
+import { productService } from '@/services/productService'
+import type { ProductFilters, StoreType, Attribute, AttributeFilter, Category, Brand } from '@/types'
 
 interface ProductFiltersSheetProps {
   storeType?: StoreType
@@ -37,8 +40,47 @@ export function ProductFiltersSheet({
   filters = {},
   onFiltersChange 
 }: ProductFiltersSheetProps) {
+  const { store: currentStore } = useCurrentStore()
   const [localFilters, setLocalFilters] = useState<ProductFilters>(filters)
   const [isOpen, setIsOpen] = useState(false)
+  const [filterableAttributes, setFilterableAttributes] = useState<Attribute[]>([])
+  const [attributeFilters, setAttributeFilters] = useState<AttributeFilter[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [brands, setBrands] = useState<Brand[]>([])
+
+  useEffect(() => {
+    if (currentStore && isOpen) {
+      loadFilterableAttributes()
+      loadLookupData()
+    }
+  }, [currentStore, isOpen])
+
+  const loadFilterableAttributes = async () => {
+    if (!currentStore) return
+    
+    try {
+      const attributes = await attributeService.getAttributesByStore(currentStore.id)
+      const filterable = attributes.filter(attr => attr.isFilterable && attr.isActive)
+      setFilterableAttributes(filterable)
+    } catch (error) {
+      console.error('Error loading filterable attributes:', error)
+    }
+  }
+
+  const loadLookupData = async () => {
+    if (!currentStore) return
+
+    try {
+      const [categoriesData, brandsData] = await Promise.all([
+        productService.getCategoriesByStore(currentStore.id),
+        productService.getBrands(currentStore.id),
+      ])
+      setCategories(categoriesData)
+      setBrands(brandsData)
+    } catch (error) {
+      console.error('Error loading filter lookups:', error)
+    }
+  }
 
   const updateFilter = (key: keyof ProductFilters, value: any) => {
     setLocalFilters(prev => ({
@@ -80,34 +122,13 @@ export function ProductFiltersSheet({
 
   const hasActiveFilters = Object.keys(localFilters).length > 0
 
-  // Datos mock para opciones de filtros
-  const categories = [
-    { id: 'cat-1', name: 'Vestidos' },
-    { id: 'cat-2', name: 'Tops' },
-    { id: 'cat-3', name: 'Pantalones' },
-    { id: 'cat-4', name: 'Accesorios' },
-  ]
+  const colors = filterableAttributes
+    .find((attribute) => attribute.slug === 'color')
+    ?.values?.map((value) => ({ id: value.id, name: value.displayValue, hex: value.hexCode })) ?? []
 
-  const brands = [
-    { id: 'brand-1', name: 'Marca A' },
-    { id: 'brand-2', name: 'Marca B' },
-    { id: 'brand-3', name: 'Marca C' },
-  ]
-
-  const colors = [
-    { id: 'color-1', name: 'Negro', hex: '#000000' },
-    { id: 'color-2', name: 'Blanco', hex: '#FFFFFF' },
-    { id: 'color-3', name: 'Rojo', hex: '#EF4444' },
-    { id: 'color-4', name: 'Azul', hex: '#3B82F6' },
-  ]
-
-  const sizes = [
-    { id: 'size-1', name: 'XS' },
-    { id: 'size-2', name: 'S' },
-    { id: 'size-3', name: 'M' },
-    { id: 'size-4', name: 'L' },
-    { id: 'size-5', name: 'XL' },
-  ]
+  const sizes = filterableAttributes
+    .find((attribute) => attribute.slug === 'size')
+    ?.values?.map((value) => ({ id: value.id, name: value.displayValue })) ?? []
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>

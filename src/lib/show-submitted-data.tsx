@@ -13,3 +13,27 @@ export function showSubmittedData(
     ),
   })
 }
+
+interface ToastOptions {
+  title: string
+  message?: string
+  type?: 'success' | 'error' | 'warning' | 'info'
+}
+
+export function showToast({ title, message, type = 'info' }: ToastOptions) {
+  switch (type) {
+    case 'success':
+      toast.success(title, { description: message })
+      break
+    case 'error':
+      toast.error(title, { description: message })
+      break
+    case 'warning':
+      toast.warning(title, { description: message })
+      break
+    case 'info':
+    default:
+      toast.info(title, { description: message })
+      break
+  }
+}

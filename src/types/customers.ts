@@ -1,13 +1,19 @@
-// Tipos para manejo de clientes en múltiples stores
+// ✅ Tipos unificados para Usuario (admin) y User (ecommerce)
+// Un User del ecommerce es un Usuario en el sistema admin
+// Nota: Mantenemos el nombre "Customer" en el código por compatibilidad, pero lo llamamos "Usuario" en la UI
 
 export type CustomerStatus = 'active' | 'inactive' | 'blocked' | 'pending_verification'
 export type CustomerSegment = 'vip' | 'frequent' | 'new' | 'at_risk' | 'churned'
 export type MarketingConsent = 'opted_in' | 'opted_out' | 'not_set'
 
+// ✅ Tipos de usuario: Mayorista (wholesale) o Cliente Final (retail)
+export type UserType = 'wholesale' | 'retail'
+
 export interface Customer {
-  id: string
+  id: string // Firebase UID
   email: string
   emailVerified: boolean
+  passwordSet: boolean // ✅ Indica si el usuario ya estableció su contraseña
   firstName: string
   lastName: string
   phone?: string
@@ -15,7 +21,18 @@ export interface Customer {
   dateOfBirth?: Date
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say'
   
-  // Estado del cliente
+  // Avatar/foto de perfil
+  photoURL?: string
+  displayName?: string // firstName + lastName generado automáticamente
+  
+  // ✅ Tipo de usuario: Determina qué precios ve
+  userType: UserType
+  
+  // Información fiscal para mayoristas
+  taxId?: string // NIT o RUT
+  businessName?: string // Razón social
+  
+  // Estado del usuario
   status: CustomerStatus
   segment: CustomerSegment
   
@@ -73,31 +90,95 @@ export interface Customer {
   storeHistory: CustomerStoreHistory[]
 }
 
+// ✅ Sistema de direcciones adaptado para República Dominicana
+export type DeliveryType = 'pickup' | 'home_delivery' // Pickup en agencia o entrega a domicilio
+export type ShippingAgency = 
+  | 'caribe_tours'
+  | 'metro'
+  | 'jet_courier'
+  | 'dhl'
+  | 'fedex'
+  | 'ups'
+  | 'domex'
+  | 'otra' // Permite agregar otras agencias
+
+// ✅ Agencias de envío disponibles con nombres legibles
+export const SHIPPING_AGENCIES = {
+  caribe_tours: 'Caribe Tours',
+  metro: 'Metro Servicios Express',
+  jet_courier: 'Jet Courier',
+  dhl: 'DHL Express',
+  fedex: 'FedEx',
+  ups: 'UPS',
+  domex: 'Domex',
+  otra: 'Otra agencia'
+} as const
+
+// ✅ Ciudades principales de República Dominicana
+export const DOMINICAN_CITIES = [
+  'Santo Domingo',
+  'Santiago de los Caballeros',
+  'La Vega',
+  'San Pedro de Macorís',
+  'La Romana',
+  'Puerto Plata',
+  'San Francisco de Macorís',
+  'Higüey',
+  'San Cristóbal',
+  'Moca',
+  'Bonao',
+  'Baní',
+  'Azua',
+  'Mao',
+  'Barahona',
+  'San Juan de la Maguana',
+  'Nagua',
+  'Monte Plata',
+  'Cotuí',
+  'Samaná'
+] as const
+
 export interface CustomerAddress {
   id: string
   customerId: string
-  type: 'shipping' | 'billing' | 'both'
-  label?: string // "Casa", "Oficina", etc.
-  firstName: string
-  lastName: string
-  company?: string
-  address1: string
-  address2?: string
-  city: string
-  state: string
-  postalCode: string
-  country: string
-  countryCode: string
-  phone?: string
-  isDefault: boolean
-  isVerified: boolean
+  label?: string // "Casa", "Oficina", "Agencia Caribe Tours Centro", etc.
   
-  // Coordenadas para delivery
+  // ✅ Tipo de entrega
+  deliveryType: DeliveryType
+  
+  // ✅ Para PICKUP en agencia
+  shippingAgency?: ShippingAgency // Nombre de la agencia
+  agencyBranch?: string // Sucursal/oficina de la agencia
+  agencyAddress?: string // Dirección de la agencia (opcional)
+  
+  // ✅ Para ENTREGA A DOMICILIO
+  firstName?: string
+  lastName?: string
+  phone: string // REQUERIDO para contacto
+  whatsapp?: string // Número de WhatsApp (puede ser diferente al teléfono)
+  
+  // Dirección simplificada para RD
+  city: string // Ciudad/municipio (ej: "Santo Domingo", "Santiago")
+  sector: string // Sector o barrio (ej: "Naco", "Piantini", "Los Mina")
+  street: string // Calle principal
+  houseNumber?: string // Número de casa/edificio
+  reference: string // Punto de referencia (ej: "Frente al Supermercado Nacional")
+  additionalDetails?: string // Detalles adicionales (apartamento, piso, etc.)
+  
+  // Siempre República Dominicana
+  country: 'República Dominicana'
+  countryCode: 'DO'
+  
+  // Coordenadas para delivery (opcional)
   latitude?: number
   longitude?: number
   
-  // Instrucciones de entrega
+  // Instrucciones especiales
   deliveryInstructions?: string
+  
+  // Preferencias
+  isDefault: boolean
+  isVerified: boolean
   
   createdAt: Date
   updatedAt: Date

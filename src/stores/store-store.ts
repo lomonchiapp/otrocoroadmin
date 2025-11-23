@@ -1,7 +1,7 @@
 // Store para manejo del estado de tiendas múltiples
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Store, AdminState, AdminUser } from '@/types'
+import type { Store, AdminState, AdminUser, Permission } from '@/types'
 
 interface StoreState extends AdminState {
   // Estados
@@ -17,7 +17,7 @@ interface StoreState extends AdminState {
   
   // Acciones para usuario admin
   setUser: (user: AdminUser) => void
-  setPermissions: (permissions: any[]) => void
+  setPermissions: (permissions: Permission[]) => void
   
   // Acciones para estados
   setLoading: (loading: boolean) => void
@@ -93,7 +93,7 @@ export const useStoreStore = create<StoreState>()(
         set({ user, error: null })
       },
       
-      setPermissions: (permissions: any[]) => {
+      setPermissions: (permissions: Permission[]) => {
         set({ permissions })
       },
       
@@ -127,7 +127,7 @@ export const useStoreStore = create<StoreState>()(
         return currentStore?.type || null
       },
       
-      canManageStore: (storeId: string) => {
+      canManageStore: (storeId: string): boolean => {
         const { user } = get()
         if (!user) return false
         
@@ -136,7 +136,7 @@ export const useStoreStore = create<StoreState>()(
         
         // Verificar rol específico en la tienda
         const storeAccess = user.storeAccess.find(access => access.storeId === storeId)
-        return storeAccess && ['store_admin', 'store_manager'].includes(storeAccess.role)
+        return !!(storeAccess && ['store_admin', 'store_manager'].includes(storeAccess.role))
       },
       
       // Reset

@@ -1,0 +1,566 @@
+import React, { useState, useMemo } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import {
+  Save,
+  X,
+  Upload,
+  Loader2,
+  Plus,
+  Tag,
+  Palette,
+  Ruler,
+  Shirt,
+  EyeOff,
+  Hash,
+  FolderPlus
+} from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Sheet,
+  SheetContent,
+} from '@/components/ui/sheet'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { SimpleVariationsManager } from './simple-variations-manager'
+import { productService } from '@/services/productService'
+import { attributeService } from '@/services/attributeService'
+import { type Product, type ProductType, type Category, type Brand, type ProductVariation, type AttributeValue } from '@/types'
+import '@/styles/product-sheet.css'
+
+const productSchema = z.object({
+  name: z.string().min(1, 'El nombre es requerido'),
+  slug: z.string().min(1, 'El slug es requerido'),
+  description: z.string().min(1, 'La descripción es requerida'),
+  shortDescription: z.string().optional(),
+  type: z.enum(['clothing', 'jewelry', 'accessory']),
+  categoryId: z.string().min(1, 'La categoría es requerida'),
+  subcategoryId: z.string().optional(),
+  brandId: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  status: z.enum(['draft', 'active', 'archived', 'out_of_stock']),
+  isFeatured: z.boolean().optional(),
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
+  basePrice: z.number().min(0, 'El precio debe ser mayor o igual a 0').optional(),
+  compareAtPrice: z.number().min(0).optional(),
+})
+
+type ProductFormData = z.infer<typeof productSchema>
+
+interface CreateProductSheetProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  storeId?: string
+  storeType?: ProductType
+  onProductCreated?: (product: Product) => void
+  isPageMode?: boolean // Nuevo prop para modo página
+}
+
+export function CreateProductSheet({
+  open,
+  onOpenChange,
+  storeId: propStoreId,
+  storeType: propStoreType,
+  onProductCreated,
+  isPageMode = false,
+}: CreateProductSheetProps) {
+  const { store: currentStore, type: storeType } = useCurrentStore()
+
+  // Usar storeId del prop o del contexto
+  const storeId = propStoreId || currentStore?.id || ''
+  const effectiveStoreType = propStoreType || storeType
+
+  // Estados principales
+  const [variations, setVariations] = useState<ProductVariation[]>([])
+  const [images, setImages] = useState<string[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [brands, setBrands] = useState<Brand[]>([])
+  const [attributes, setAttributes] = useState<Array<{
+    id: string
+    name: string
+    values: AttributeValue[]
+  }>>([])
+  // Estados para diálogos
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false)
+  const [showAttributeDialog, setShowAttributeDialog] = useState(false)
+
+  // Estado para el progreso del formulario
+  const [progress, setProgress] = useState(0)
+
+  // Memoizar datos para evitar re-renders innecesarios
+  const memoizedCategories = useMemo(() => categories, [categories])
+  const memoizedBrands = useMemo(() => brands, [brands])
+  const memoizedAttributes = useMemo(() => attributes, [attributes])
+
+  const form = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: '',
+      slug: '',
+      description: '',
+      shortDescription: '',
+      type: storeType,
+      categoryId: '',
+      subcategoryId: '',
+      brandId: '',
+      tags: [],
+      status: 'draft',
+      isFeatured: false,
+      seoTitle: '',
+      seoDescription: '',
+      basePrice: 0,
+      compareAtPrice: 0,
+    },
+  })
+
+  // Cargar datos necesarios cuando se abre el sheet
+  React.useEffect(() => {
+    if (open) {
+      loadFormData()
+    } else {
+      // Limpiar formulario cuando se cierra
+      form.reset()
+      setVariations([])
+      setImages([])
+      setProgress(0)
+    }
+  }, [open])
+
+  // Calcular progreso del formulario - optimizado para observar solo campos específicos
+  React.useEffect(() => {
+    const values = form.getValues()
+    let completed = 0
+    let total = 7
+
+    if (values.name?.trim()) completed++
+    if (values.slug?.trim()) completed++
+    if (values.description?.trim()) completed++
+    if (values.categoryId) completed++
+    if (values.basePrice && values.basePrice > 0) completed++
+    if (values.status) completed++
+    if (variations.length > 0) completed++
+
+    const newProgress = Math.round((completed / total) * 100)
+    setProgress(newProgress)
+  }, [form.watch('name'), form.watch('slug'), form.watch('description'), form.watch('categoryId'), form.watch('basePrice'), form.watch('status'), variations.length])
+
+  const loadFormData = async () => {
+    try {
+      // Cargar todos los datos en paralelo para mayor velocidad
+      const [categoriesData, brandsData, attributesData] = await Promise.all([
+        productService.getCategoriesByStore(storeId).catch(err => {
+          console.error('Error loading categories:', err)
+          return []
+        }),
+        productService.getBrands().catch(err => {
+          console.error('Error loading brands:', err)
+          return []
+        }),
+        attributeService.getAttributesByProductType(storeId, storeType).catch(err => {
+          console.error('Error loading attributes:', err)
+          return []
+        })
+      ])
+
+      setCategories(categoriesData)
+      setBrands(brandsData)
+      setAttributes(attributesData.map(attr => ({
+        id: attr.id,
+        name: attr.name,
+        values: attr.values || []
+      })))
+    } catch (error) {
+      console.error('Error loading form data:', error)
+    }
+  }
+
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/--+/g, '-')
+      .trim()
+  }
+
+  // Generar slug automáticamente cuando cambia el nombre
+  React.useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'name' && value.name && !form.getValues('slug')) {
+        form.setValue('slug', generateSlug(value.name))
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [form])
+
+  const handleSave = async (data: ProductFormData) => {
+    setIsSubmitting(true)
+    try {
+      const productData = {
+        ...data,
+        storeId,
+        variations,
+        attributes: [], // Sistema de atributos flexible
+        metafields: [], // Metafields adicionales
+        tags: data.tags || [],
+        images: images.map((url, index) => ({
+          id: `img_${Date.now()}_${index}`,
+          url,
+          alt: `${data.name} - Imagen ${index + 1}`,
+          position: index,
+          isPrimary: index === 0,
+          variantIds: [],
+          width: 800,
+          height: 600,
+          format: 'jpg' as const,
+          size: 102400
+        })),
+        createdBy: 'admin-user',
+        updatedBy: 'admin-user'
+      }
+
+      const productId = await productService.createProduct(productData as any)
+      const newProduct = await productService.getProduct(productId)
+
+      if (newProduct && onProductCreated) {
+        onProductCreated(newProduct)
+      }
+
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error creating product:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files) {
+      const newImages = Array.from(files).map(file => URL.createObjectURL(file))
+      setImages(prev => [...prev, ...newImages])
+    }
+  }
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // Funciones para manejar diálogos
+  const handleCreateCategory = async (categoryName: string) => {
+    try {
+      await productService.createCategory({
+        storeId,
+        name: categoryName,
+        slug: categoryName.toLowerCase().replace(/ /g, '-'),
+        productType: 'clothing',
+        isActive: true,
+        level: 1,
+        sortOrder: categories.length + 1
+      })
+      // Recargar categorías
+      const updatedCategories = await productService.getCategoriesByStore(storeId)
+      setCategories(updatedCategories)
+      setShowCategoryDialog(false)
+    } catch (error) {
+      console.error('Error creating category:', error)
+    }
+  }
+
+  const handleCreateAttribute = async (attributeData: { name: string; type: string; values: string[] }) => {
+    try {
+      const attributeId = await attributeService.createAttribute(storeId, {
+        name: attributeData.name,
+        slug: attributeData.name.toLowerCase().replace(/ /g, '-'),
+        type: attributeData.type as any,
+        inputType: 'select',
+        productTypes: ['clothing'],
+        isVariationAttribute: true,
+        isRequired: false,
+        isActive: true,
+        isFilterable: true,
+        isVisible: true,
+        sortOrder: memoizedAttributes.length + 1,
+        values: [],
+        createdBy: 'admin-user',
+        updatedBy: 'admin-user'
+      })
+
+      // Crear valores del atributo
+      for (const value of attributeData.values) {
+        await attributeService.createAttributeValue(attributeId, {
+          value,
+          displayValue: value,
+          sortOrder: attributeData.values.indexOf(value),
+          isActive: true
+        })
+      }
+
+      // Recargar atributos
+      const updatedAttributes = await attributeService.getAttributesByProductType(storeId, 'clothing')
+      setAttributes(updatedAttributes.map(attr => ({
+        id: attr.id,
+        name: attr.name,
+        values: attr.values || []
+      })))
+      setShowAttributeDialog(false)
+    } catch (error) {
+      console.error('Error creating attribute:', error)
+    }
+  }
+
+
+  if (isPageMode) {
+    // Modo página - renderizar directamente
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header Mejorado */}
+        <div className="flex-shrink-0 border-b bg-gradient-to-r from-slate-50 to-white px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
+                <Shirt className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Nuevo Producto de Ropa</h2>
+                <p className="text-sm text-slate-600 mt-0.5">
+                  Crea un producto completo con variaciones y atributos
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Indicator */}
+          <div className="mt-4 flex items-center gap-2">
+            <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className="h-2 progress-bar rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-slate-500 font-medium">{progress}% completado</span>
+              {progress === 100 && (
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <ScrollArea className="flex-1 px-6 py-6 product-scroll-area" style={{ height: 'calc(100vh - 200px)' }}>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+              {/* Aquí irá todo el contenido del formulario */}
+              <div className="space-y-6">
+                {/* Campos del formulario irán aquí */}
+                <div>Formulario completo irá aquí</div>
+              </div>
+            </form>
+          </Form>
+        </ScrollArea>
+
+        {/* Footer */}
+        <div className="flex-shrink-0 border-t bg-white px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <EyeOff className="h-3 w-3" />
+                <span>Campos obligatorios marcados con *</span>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => window.history.back()}
+                disabled={isSubmitting}
+                className="h-10 px-6 border-slate-300 hover:bg-slate-50"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                onClick={form.handleSubmit(handleSave)}
+                className="h-10 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creando Producto...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Crear Producto
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Modo Sheet (por defecto)
+  return (
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="sm:max-w-[1000px] w-full h-[95vh] overflow-hidden border-l-0 product-sheet-content">
+          <div className="flex flex-col h-full">
+            {/* Header Mejorado */}
+            <div className="flex-shrink-0 border-b bg-gradient-to-r from-slate-50 to-white px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
+                    <Shirt className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Nuevo Producto de Ropa</h2>
+                    <p className="text-sm text-slate-600 mt-0.5">
+                      Crea un producto completo con variaciones y atributos
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="product-badge">
+                    <Tag className="h-3 w-3 mr-1" />
+                    Ropa
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onOpenChange(false)}
+                    className="h-8 w-8 p-0 hover:bg-slate-100"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Progress Indicator */}
+              <div className="mt-4 flex items-center gap-2">
+                <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-2 progress-bar rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-slate-500 font-medium">{progress}% completado</span>
+                  {progress === 100 && (
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Contenido Principal */}
+            <ScrollArea className="flex-1 px-6 py-6 product-scroll-area" style={{ height: 'calc(95vh - 160px)' }}>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+                  {/* Aquí irá todo el contenido del formulario */}
+                  <div className="space-y-6">
+                    {/* Campos del formulario irán aquí */}
+                    <div>Contenido del formulario completo irá aquí</div>
+                  </div>
+                </form>
+              </Form>
+            </ScrollArea>
+
+            {/* Footer */}
+            <div className="flex-shrink-0 border-t bg-white px-6 py-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <EyeOff className="h-3 w-3" />
+                    <span>Campos obligatorios marcados con *</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-slate-600 font-medium">Formulario listo</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    disabled={isSubmitting}
+                    className="h-10 px-6 border-slate-300 hover:bg-slate-50"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    onClick={form.handleSubmit(handleSave)}
+                    className="h-10 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creando Producto...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Crear Producto
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+    {/* Diálogo para crear categoría */}
+    <CreateCategoryDialog
+      open={showCategoryDialog}
+      onOpenChange={setShowCategoryDialog}
+      onCreateCategory={handleCreateCategory}
+    />
+
+    {/* Diálogo para crear atributo */}
+    <CreateAttributeDialog
+      open={showAttributeDialog}
+      onOpenChange={setShowAttributeDialog}
+      onCreateAttribute={handleCreateAttribute}
+    />
+  </>
+}

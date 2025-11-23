@@ -124,20 +124,39 @@ export interface VariantSnapshot {
   weightUnit?: string
 }
 
+// ✅ Address adaptado para República Dominicana - Compatible con CustomerAddress
 export interface Address {
   id?: string
   type: 'shipping' | 'billing'
-  firstName: string
-  lastName: string
-  company?: string
-  address1: string
-  address2?: string
-  city: string
-  state: string
-  postalCode: string
-  country: string
-  countryCode: string
-  phone?: string
+  
+  // Tipo de entrega
+  deliveryType: 'pickup' | 'home_delivery'
+  
+  // Para PICKUP en agencia
+  shippingAgency?: string // 'Caribe Tours', 'Metro', etc.
+  agencyBranch?: string
+  agencyAddress?: string
+  
+  // Para ENTREGA A DOMICILIO
+  firstName?: string
+  lastName?: string
+  phone: string
+  whatsapp?: string
+  
+  // Dirección en República Dominicana
+  city: string // Ciudad/municipio
+  sector: string // Sector o barrio
+  street: string // Calle
+  houseNumber?: string
+  reference: string // Punto de referencia
+  additionalDetails?: string
+  
+  country: 'República Dominicana'
+  countryCode: 'DO'
+  
+  latitude?: number
+  longitude?: number
+  deliveryInstructions?: string
   isDefault?: boolean
 }
 

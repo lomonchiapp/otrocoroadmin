@@ -1,0 +1,15 @@
+// Export all product components
+export { ProductsTable } from './products-table'
+export { ProductFiltersSheet } from './product-filters-sheet'
+export { BulkActionsDropdown } from './bulk-actions-dropdown'
+export { ProductStatsCards } from './product-stats-cards'
+export { QuickAddProductDialog } from './quick-add-product-dialog'
+export { ProductManager } from './product-manager'
+export { BulkAddProductDialog } from './bulk-add-product-dialog'
+export { ProductVariationsManager } from './product-variations-manager'
+export { InlineCategoryManager } from './inline-category-manager'
+export { BrandsManager } from './brands-manager'
+export { AttributeValuesManager } from './attribute-values-manager'
+export { CategoriesPage } from './categories-page'
+export { QuickStockManager } from './quick-stock-manager'
+

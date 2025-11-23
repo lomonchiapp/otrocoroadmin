@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
-import { StoreSwitcher } from '@/components/store-switcher'
 
 type HeaderProps = React.HTMLAttributes<HTMLElement> & {
   fixed?: boolean
@@ -44,8 +43,6 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
       >
         <SidebarTrigger variant='outline' className='max-md:scale-125' />
         <Separator orientation='vertical' className='h-6' />
-        <StoreSwitcher className="max-md:hidden" />
-        <Separator orientation='vertical' className='h-6 max-md:hidden' />
         {children}
       </div>
     </header>

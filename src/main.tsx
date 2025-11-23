@@ -10,7 +10,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { handleServerError } from '@/lib/handle-server-error'
-import { initializeMockData } from '@/data/mock-stores'
+import { initializeMockData, clearStoreState } from '@/data/mock-stores'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
@@ -86,6 +86,7 @@ declare module '@tanstack/react-router' {
 }
 
 // Initialize mock data for development
+clearStoreState() // Limpiar estado previo
 initializeMockData()
 
 // Render the app
