@@ -51,6 +51,21 @@ class OrderService {
     }
   }
 
+  async getOrderById(orderId: string): Promise<Order | null> {
+    try {
+      const docRef = doc(db, 'orders', orderId)
+      const docSnap = await getDoc(docRef)
+      
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Order
+      }
+      return null
+    } catch (error) {
+      this.handleError('getting order', error)
+      return null
+    }
+  }
+
   async updateOrder(orderId: string, updates: OrderUpdate): Promise<void> {
     try {
       const cleanUpdates = this.cleanObject(updates)
@@ -81,8 +96,48 @@ class OrderService {
         return null
       }
 
-      const data = docSnap.data() as Omit<Order, 'id'>
-      return { ...data, id: docSnap.id }
+      const data = docSnap.data() as any
+      // Convertir Timestamps a Date si es necesario
+      const createdAt = data.createdAt?.toDate?.() || data.createdAt || new Date()
+      const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt || new Date()
+      
+      // Mapear datos para compatibilidad entre otrocorofashion y otrocoroadmin
+      const order: Order = {
+        ...data,
+        id: docSnap.id,
+        createdAt,
+        updatedAt,
+        // Si no tiene customer pero tiene user, crear customer desde user
+        customer: data.customer || (data.user ? {
+          id: data.userId || data.user.id || '',
+          email: data.user.email || '',
+          firstName: data.user.firstName || data.user.displayName?.split(' ')[0] || '',
+          lastName: data.user.lastName || data.user.displayName?.split(' ').slice(1).join(' ') || '',
+          phone: data.user.phone,
+          isGuest: false,
+          totalOrders: data.user.totalOrders || 0,
+          totalSpent: data.user.totalSpent || 0,
+          averageOrderValue: data.user.averageOrderValue || 0,
+          lastOrderAt: data.user.lastOrderAt?.toDate?.() || data.user.lastOrderAt
+        } : {
+          id: data.userId || '',
+          email: '',
+          firstName: '',
+          lastName: '',
+          isGuest: false,
+          totalOrders: 0,
+          totalSpent: 0,
+          averageOrderValue: 0
+        }),
+        // Asegurar campos requeridos
+        customerId: data.customerId || data.userId || '',
+        fulfillmentStatus: data.fulfillmentStatus || 'pending',
+        itemsCount: data.itemsCount || (data.items?.length || 0),
+        source: data.source || 'web',
+        storeId: data.storeId || '',
+      }
+      
+      return order
     } catch (error) {
       this.handleError('getting order', error)
     }
@@ -94,27 +149,71 @@ class OrderService {
     onNext: (items: Order[]) => void,
     onError?: (error: Error) => void,
   ): () => void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const q = query(collection(db, 'orders'), ...(constraints as any[]))
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const q = query(collection(db, 'orders'), ...(constraints as any[]))
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot: QuerySnapshot) => {
-        const items = snapshot.docs.map((docSnapshot) => {
-          const data = docSnapshot.data() as Omit<Order, 'id'>
-          return {
-            ...data,
-            id: docSnapshot.id,
-          }
-        }) as Order[]
-        onNext(items)
-      },
-      (error) => {
-        onError?.(error)
-      },
-    )
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot: QuerySnapshot) => {
+          const items = snapshot.docs.map((docSnapshot) => {
+            const data = docSnapshot.data() as any
+            // Convertir Timestamps a Date si es necesario
+            const createdAt = data.createdAt?.toDate?.() || data.createdAt || new Date()
+            const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt || new Date()
+            
+            // Mapear datos para compatibilidad entre otrocorofashion y otrocoroadmin
+            const order: Order = {
+              ...data,
+              id: docSnapshot.id,
+              createdAt,
+              updatedAt,
+              // Si no tiene customer pero tiene user, crear customer desde user
+              customer: data.customer || (data.user ? {
+                id: data.userId || data.user.id || '',
+                email: data.user.email || '',
+                firstName: data.user.firstName || data.user.displayName?.split(' ')[0] || '',
+                lastName: data.user.lastName || data.user.displayName?.split(' ').slice(1).join(' ') || '',
+                phone: data.user.phone,
+                isGuest: false,
+                totalOrders: data.user.totalOrders || 0,
+                totalSpent: data.user.totalSpent || 0,
+                averageOrderValue: data.user.averageOrderValue || 0,
+                lastOrderAt: data.user.lastOrderAt?.toDate?.() || data.user.lastOrderAt
+              } : {
+                id: data.userId || '',
+                email: '',
+                firstName: '',
+                lastName: '',
+                isGuest: false,
+                totalOrders: 0,
+                totalSpent: 0,
+                averageOrderValue: 0
+              }),
+              // Asegurar campos requeridos
+              customerId: data.customerId || data.userId || '',
+              fulfillmentStatus: data.fulfillmentStatus || 'pending',
+              itemsCount: data.itemsCount || (data.items?.length || 0),
+              source: data.source || 'web',
+              storeId: data.storeId || '',
+            }
+            
+            return order
+          })
+          onNext(items)
+        },
+        (error) => {
+          console.error('Error in order subscription:', error)
+          onError?.(error)
+        },
+      )
 
-    return unsubscribe
+      return unsubscribe
+    } catch (error) {
+      console.error('Error setting up order subscription:', error)
+      // Retornar función vacía si hay error
+      return () => {}
+    }
   }
 
   async getOrdersByStore(storeId: string): Promise<Order[]> {

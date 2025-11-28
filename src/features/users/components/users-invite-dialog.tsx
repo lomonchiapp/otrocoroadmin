@@ -25,6 +25,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { SelectDropdown } from '@/components/select-dropdown'
 import { roles } from '../data/data'
+import { userService } from '@/services/userService'
+import { useState } from 'react'
 
 const formSchema = z.object({
   email: z.email({
@@ -51,10 +53,28 @@ export function UsersInviteDialog({
     defaultValues: { email: '', role: '', desc: '' },
   })
 
-  const onSubmit = (values: UserInviteForm) => {
-    form.reset()
-    showSubmittedData(values)
-    onOpenChange(false)
+  const [loading, setLoading] = useState(false)
+
+  const onSubmit = async (values: UserInviteForm) => {
+    try {
+      setLoading(true)
+      
+      await userService.inviteUser({
+        email: values.email,
+        role: values.role as any,
+        desc: values.desc,
+      })
+      
+      form.reset()
+      onOpenChange(false)
+      // Disparar evento personalizado para refrescar la lista
+      window.dispatchEvent(new CustomEvent('users-refresh'))
+    } catch (error) {
+      console.error('Error inviting user:', error)
+      alert('Error al enviar invitación: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -140,8 +160,8 @@ export function UsersInviteDialog({
           <DialogClose asChild>
             <Button variant='outline'>Cancel</Button>
           </DialogClose>
-          <Button type='submit' form='user-invite-form'>
-            Invite <Send />
+          <Button type='submit' form='user-invite-form' disabled={loading}>
+            {loading ? 'Enviando...' : 'Invite'} <Send />
           </Button>
         </DialogFooter>
       </DialogContent>

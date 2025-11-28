@@ -24,6 +24,7 @@ import {
 import { Link } from '@tanstack/react-router'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { OrderStatusSelector, PaymentStatusSelector, FulfillmentStatusSelector } from './order-status-selector'
 
 interface OrdersTableProps {
   orders: Order[]
@@ -103,13 +104,35 @@ export function OrdersTable({
       accessorKey: 'customer',
       header: 'Cliente',
       cell: ({ row }) => {
-        const { customer } = row.original
+        const order = row.original
+        // Compatibilidad: puede tener 'customer' o 'user'
+        const customer = order.customer || (order as any).user
+        
+        if (!customer) {
+          return (
+            <div className="flex flex-col">
+              <span className="font-medium text-muted-foreground">Cliente no disponible</span>
+              <span className="text-sm text-muted-foreground">-</span>
+            </div>
+          )
+        }
+        
+        // Manejar diferentes estructuras de datos
+        const firstName = customer.firstName || customer.displayName?.split(' ')[0] || ''
+        const lastName = customer.lastName || customer.displayName?.split(' ').slice(1).join(' ') || ''
+        const email = customer.email || ''
+        const displayName = firstName && lastName 
+          ? `${firstName} ${lastName}`.trim()
+          : customer.displayName || email || 'Cliente'
+        
         return (
           <div className="flex flex-col">
             <span className="font-medium">
-              {customer.firstName} {customer.lastName}
+              {displayName}
             </span>
-            <span className="text-sm text-muted-foreground">{customer.email}</span>
+            {email && (
+              <span className="text-sm text-muted-foreground">{email}</span>
+            )}
           </div>
         )
       },
@@ -118,24 +141,39 @@ export function OrdersTable({
       accessorKey: 'status',
       header: 'Estado',
       cell: ({ row }) => {
-        const status = getStatusBadge(row.original.status)
-        return <Badge variant={status.variant}>{status.label}</Badge>
+        return (
+          <OrderStatusSelector
+            currentStatus={row.original.status}
+            onStatusChange={(status) => onUpdateStatus?.(row.original.id, status)}
+            variant="compact"
+          />
+        )
       },
     },
     {
       accessorKey: 'paymentStatus',
       header: 'Pago',
       cell: ({ row }) => {
-        const status = getPaymentStatusBadge(row.original.paymentStatus)
-        return <Badge variant={status.variant}>{status.label}</Badge>
+        return (
+          <PaymentStatusSelector
+            currentStatus={row.original.paymentStatus}
+            onStatusChange={(status) => onUpdatePaymentStatus?.(row.original.id, status)}
+            variant="compact"
+          />
+        )
       },
     },
     {
       accessorKey: 'fulfillmentStatus',
       header: 'Envío',
       cell: ({ row }) => {
-        const status = getFulfillmentStatusBadge(row.original.fulfillmentStatus)
-        return <Badge variant={status.variant}>{status.label}</Badge>
+        return (
+          <FulfillmentStatusSelector
+            currentStatus={row.original.fulfillmentStatus}
+            onStatusChange={(status) => onUpdateFulfillmentStatus?.(row.original.id, status)}
+            variant="compact"
+          />
+        )
       },
     },
     {

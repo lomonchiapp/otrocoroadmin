@@ -38,8 +38,10 @@ export function NavGroup({ title, items }: NavGroupProps) {
   const href = useLocation({ select: (location) => location.href })
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{title}</SidebarGroupLabel>
-      <SidebarMenu>
+      <SidebarGroupLabel className='text-xs font-medium uppercase tracking-wider text-sidebar-foreground/60'>
+        {title}
+      </SidebarGroupLabel>
+      <SidebarMenu className='gap-1.5'>
         {items.map((item) => {
           const key = `${item.title}-${item.url}`
 
@@ -105,12 +107,13 @@ function SidebarMenuCollapsible({
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent className='CollapsibleContent'>
-          <SidebarMenuSub>
+          <SidebarMenuSub className='mr-0 border-l border-sidebar-border/70 px-2.5 py-0.5'>
             {item.items.map((subItem) => (
               <SidebarMenuSubItem key={subItem.title}>
                 <SidebarMenuSubButton
                   asChild
                   isActive={checkIsActive(href, subItem)}
+                  className='h-8'
                 >
                   <Link to={subItem.url} onClick={() => setOpenMobile(false)}>
                     {subItem.icon && <subItem.icon />}

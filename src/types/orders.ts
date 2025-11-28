@@ -130,7 +130,7 @@ export interface Address {
   type: 'shipping' | 'billing'
   
   // Tipo de entrega
-  deliveryType: 'pickup' | 'home_delivery'
+  deliveryType: 'pickup' | 'home_delivery' | 'store_pickup'
   
   // Para PICKUP en agencia
   shippingAgency?: string // 'Caribe Tours', 'Metro', etc.
@@ -190,6 +190,14 @@ export interface OrderPayment {
   authorizationCode?: string
   captureId?: string
   refundIds: string[]
+  
+  // ✅ Campos para vouchers de depósito bancario
+  voucherUrl?: string
+  voucherPath?: string
+  voucherStatus?: 'pending' | 'approved' | 'rejected'
+  voucherReviewedAt?: Date
+  voucherReviewedBy?: string
+  voucherNotes?: string
   
   // Fechas
   authorizedAt?: Date

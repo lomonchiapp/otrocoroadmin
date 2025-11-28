@@ -29,6 +29,7 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { useCurrentStore } from '@/hooks/use-current-store'
 import { JewelryProductsPage } from './jewelry-products-page'
 import { productService } from '@/services/productService'
@@ -336,6 +337,7 @@ function ProductsPage() {
       <Header fixed>
         <Search />
         <div className="ms-auto flex items-center space-x-4">
+          <NotificationBell />
           <ThemeSwitch />
           <ConfigDrawer />
           <ProfileDropdown />

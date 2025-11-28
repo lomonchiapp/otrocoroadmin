@@ -20,11 +20,11 @@ export const OtrocoroLogo: React.FC<OtrocoroLogoProps> = ({
       />
       {showText && (
         <div className="flex flex-col">
-          <span className="font-bold text-lg bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Otrocoro
+          <span className="font-bold text-lg bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+            OtroCoro
           </span>
-          <span className="text-xs text-muted-foreground">
-            Admin Panel
+          <span className="text-xs text-muted-foreground font-medium">
+            Panel de Administración
           </span>
         </div>
       )}

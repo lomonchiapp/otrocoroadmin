@@ -21,6 +21,7 @@ export * from './products' // Legacy - mantener por compatibilidad
 export * from './sellers'
 export * from './stores'
 export * from './bundle'
+export * from './payments'
 
 // Re-exportaciones específicas para retrocompatibilidad
 export type { Product, ProductImage } from './product'

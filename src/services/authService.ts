@@ -1,11 +1,16 @@
 /**
  * Servicio de autenticación para gestionar usuarios de Firebase Auth
- * Este servicio se usa cuando el admin crea usuarios desde el panel
+ * Maneja login, logout, registro y autenticación con Google
  */
 
 import { 
   createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
   sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
   type User as FirebaseUser,
 } from 'firebase/auth'
 import { 
@@ -15,8 +20,12 @@ import {
   getDoc,
   updateDoc,
   serverTimestamp,
+  query,
+  where,
+  getDocs,
 } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
+import type { User } from '@/features/users/data/schema'
 
 /**
  * Token de invitación para establecer contraseña
@@ -45,6 +54,8 @@ export interface WelcomeEmailData {
 class AuthService {
   private tokensCollection = collection(db, 'passwordSetupTokens')
   private mailCollection = collection(db, 'mail')
+  private usersCollection = 'systemUsers' // Colección de usuarios admin
+  private googleProvider = new GoogleAuthProvider()
 
   /**
    * Genera un token único para establecer contraseña
@@ -371,6 +382,186 @@ class AuthService {
       console.error('❌ Error al enviar email de recuperación:', error)
       throw error
     }
+  }
+
+  /**
+   * Inicia sesión con email y contraseña
+   */
+  async signInWithEmail(email: string, password: string): Promise<FirebaseUser> {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const firebaseUser = userCredential.user
+
+      // Verificar que el usuario existe en la colección de usuarios admin
+      const userDoc = await this.getAdminUserByEmail(email)
+      if (!userDoc) {
+        await signOut(auth)
+        throw new Error('Usuario no autorizado. Contacta al administrador.')
+      }
+
+      // Verificar que el usuario está activo
+      if (userDoc.status !== 'active') {
+        await signOut(auth)
+        throw new Error('Tu cuenta está suspendida o inactiva.')
+      }
+
+      // Actualizar último login
+      await updateDoc(doc(db, this.usersCollection, userDoc.id), {
+        lastLoginAt: serverTimestamp(),
+      })
+
+      return firebaseUser
+    } catch (error: any) {
+      console.error('Error signing in:', error)
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        throw new Error('Email o contraseña incorrectos')
+      }
+      if (error.code === 'auth/invalid-email') {
+        throw new Error('Email inválido')
+      }
+      if (error.code === 'auth/too-many-requests') {
+        throw new Error('Demasiados intentos fallidos. Intenta más tarde.')
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Inicia sesión con Google
+   */
+  async signInWithGoogle(): Promise<FirebaseUser> {
+    try {
+      const result = await signInWithPopup(auth, this.googleProvider)
+      const firebaseUser = result.user
+
+      // Verificar o crear usuario admin en Firestore
+      let userDoc = await this.getAdminUserByEmail(firebaseUser.email!)
+      if (!userDoc) {
+        // Si no existe, crear usuario admin básico
+        // NOTA: En producción, esto debería requerir aprobación del super admin
+        const newUser: Omit<User, 'id'> = {
+          firstName: firebaseUser.displayName?.split(' ')[0] || 'Usuario',
+          lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'Google',
+          username: firebaseUser.email!.split('@')[0],
+          email: firebaseUser.email!,
+          phoneNumber: firebaseUser.phoneNumber || '',
+          role: 'editor', // Rol por defecto, puede ser cambiado por admin
+          status: 'active',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        await setDoc(doc(db, this.usersCollection, firebaseUser.uid), {
+          ...newUser,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+
+        userDoc = {
+          id: firebaseUser.uid,
+          ...newUser,
+        } as User
+      } else {
+        // Actualizar último login
+        await updateDoc(doc(db, this.usersCollection, userDoc.id), {
+          lastLoginAt: serverTimestamp(),
+        })
+      }
+
+      // Verificar que el usuario está activo
+      if (userDoc.status !== 'active') {
+        await signOut(auth)
+        throw new Error('Tu cuenta está suspendida o inactiva.')
+      }
+
+      return firebaseUser
+    } catch (error: any) {
+      console.error('Error signing in with Google:', error)
+      if (error.code === 'auth/popup-closed-by-user') {
+        throw new Error('Inicio de sesión cancelado')
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Cierra sesión
+   */
+  async signOut(): Promise<void> {
+    try {
+      await signOut(auth)
+    } catch (error) {
+      console.error('Error signing out:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Obtiene el usuario admin desde Firestore por email
+   */
+  async getAdminUserByEmail(email: string): Promise<User | null> {
+    try {
+      const q = query(
+        collection(db, this.usersCollection),
+        where('email', '==', email.toLowerCase())
+      )
+      const snapshot = await getDocs(q)
+      
+      if (snapshot.empty) {
+        return null
+      }
+
+      const doc = snapshot.docs[0]
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      } as User
+    } catch (error) {
+      console.error('Error getting admin user:', error)
+      return null
+    }
+  }
+
+  /**
+   * Obtiene el usuario admin desde Firestore por ID
+   */
+  async getAdminUserById(userId: string): Promise<User | null> {
+    try {
+      const docRef = doc(db, this.usersCollection, userId)
+      const docSnap = await getDoc(docRef)
+      
+      if (!docSnap.exists()) {
+        return null
+      }
+
+      const data = docSnap.data()
+      return {
+        id: docSnap.id,
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      } as User
+    } catch (error) {
+      console.error('Error getting admin user:', error)
+      return null
+    }
+  }
+
+  /**
+   * Suscripción al estado de autenticación
+   */
+  onAuthStateChanged(callback: (user: FirebaseUser | null) => void): () => void {
+    return onAuthStateChanged(auth, callback)
+  }
+
+  /**
+   * Obtiene el usuario actual de Firebase Auth
+   */
+  getCurrentUser(): FirebaseUser | null {
+    return auth.currentUser
   }
 }
 

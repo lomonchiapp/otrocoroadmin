@@ -1,6 +1,8 @@
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { OtrocoroLogo } from '@/components/otrocoro-logo'
+import { Home, ArrowLeft, RefreshCw, AlertTriangle } from 'lucide-react'
 
 type GeneralErrorProps = React.HTMLAttributes<HTMLDivElement> & {
   minimal?: boolean
@@ -12,25 +14,110 @@ export function GeneralError({
 }: GeneralErrorProps) {
   const navigate = useNavigate()
   const { history } = useRouter()
+  
   return (
-    <div className={cn('h-svh w-full', className)}>
-      <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
+    <div className={cn('h-svh relative overflow-hidden bg-gradient-to-br from-destructive/5 via-background to-muted/20', className)}>
+      {/* Animated background elements */}
+      <div className='absolute inset-0 overflow-hidden'>
+        <div className='absolute -top-40 -right-40 w-80 h-80 bg-destructive/10 rounded-full blur-3xl animate-pulse' />
+        <div className='absolute -bottom-40 -left-40 w-80 h-80 bg-destructive/5 rounded-full blur-3xl animate-pulse delay-1000' />
+        <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-destructive/5 rounded-full blur-3xl animate-pulse delay-500' />
+      </div>
+
+      <div className='relative h-full flex flex-col items-center justify-center gap-8 p-8'>
+        {/* Logo */}
         {!minimal && (
-          <h1 className='text-[7rem] leading-tight font-bold'>500</h1>
+          <div className='animate-bounce-slow'>
+            <OtrocoroLogo className='h-16 w-auto' showText />
+          </div>
         )}
-        <span className='font-medium'>Oops! Something went wrong {`:')`}</span>
-        <p className='text-muted-foreground text-center'>
-          We apologize for the inconvenience. <br /> Please try again later.
-        </p>
+
+        {/* Error Icon */}
+        <div className='relative'>
+          <div className='w-32 h-32 rounded-full bg-destructive/10 flex items-center justify-center animate-pulse'>
+            <AlertTriangle className='w-16 h-16 text-destructive' />
+          </div>
+          <div className='absolute inset-0 w-32 h-32 rounded-full bg-destructive/20 blur-xl animate-ping' />
+        </div>
+
+        {/* Error Code */}
         {!minimal && (
-          <div className='mt-6 flex gap-4'>
-            <Button variant='outline' onClick={() => history.go(-1)}>
-              Go Back
+          <div className='relative'>
+            <h1 className='text-[12rem] md:text-[16rem] font-bold leading-none bg-gradient-to-r from-destructive via-destructive/80 to-destructive/60 bg-clip-text text-transparent animate-pulse'>
+              500
+            </h1>
+            <div className='absolute inset-0 text-[12rem] md:text-[16rem] font-bold leading-none text-destructive/20 blur-xl'>
+              500
+            </div>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className='text-center space-y-4 max-w-md'>
+          <h2 className='text-3xl md:text-4xl font-bold'>
+            Algo salió mal
+          </h2>
+          <p className='text-muted-foreground text-lg'>
+            Lo sentimos, ocurrió un error inesperado en el servidor.
+          </p>
+          <p className='text-sm text-muted-foreground/80'>
+            Nuestro equipo ha sido notificado y está trabajando para solucionarlo.
+            Por favor, intenta de nuevo en unos momentos.
+          </p>
+        </div>
+
+        {/* Actions */}
+        {!minimal && (
+          <div className='flex flex-col sm:flex-row gap-4 mt-4'>
+            <Button 
+              variant='outline' 
+              size='lg'
+              onClick={() => history.go(-1)}
+              className='gap-2'
+            >
+              <ArrowLeft className='h-4 w-4' />
+              Volver
             </Button>
-            <Button onClick={() => navigate({ to: '/' })}>Back to Home</Button>
+            <Button 
+              variant='outline'
+              size='lg'
+              onClick={() => window.location.reload()}
+              className='gap-2'
+            >
+              <RefreshCw className='h-4 w-4' />
+              Recargar
+            </Button>
+            <Button 
+              size='lg'
+              onClick={() => navigate({ to: '/' })}
+              className='gap-2'
+            >
+              <Home className='h-4 w-4' />
+              Ir al Dashboard
+            </Button>
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes bounce-slow {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
+        }
+        .animate-bounce-slow {
+          animation: bounce-slow 3s ease-in-out infinite;
+        }
+        .delay-500 {
+          animation-delay: 500ms;
+        }
+        .delay-1000 {
+          animation-delay: 1000ms;
+        }
+      `}</style>
     </div>
   )
 }

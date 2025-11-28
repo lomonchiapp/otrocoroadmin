@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { type User } from '../data/schema'
+import { userService } from '@/services/userService'
 
 type UserDeleteDialogProps = {
   open: boolean
@@ -22,11 +23,23 @@ export function UsersDeleteDialog({
 }: UserDeleteDialogProps) {
   const [value, setValue] = useState('')
 
-  const handleDelete = () => {
+  const [loading, setLoading] = useState(false)
+
+  const handleDelete = async () => {
     if (value.trim() !== currentRow.username) return
 
-    onOpenChange(false)
-    showSubmittedData(currentRow, 'The following user has been deleted:')
+    try {
+      setLoading(true)
+      await userService.deleteUser(currentRow.id)
+      onOpenChange(false)
+      // Disparar evento personalizado para refrescar la lista
+      window.dispatchEvent(new CustomEvent('users-refresh'))
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      alert('Error al eliminar el usuario: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -34,7 +47,7 @@ export function UsersDeleteDialog({
       open={open}
       onOpenChange={onOpenChange}
       handleConfirm={handleDelete}
-      disabled={value.trim() !== currentRow.username}
+      disabled={value.trim() !== currentRow.username || loading}
       title={
         <span className='text-destructive'>
           <AlertTriangle

@@ -23,8 +23,32 @@ export interface StoreSettings {
   trackInventory: boolean
   defaultTaxRate: number
   shippingZones: ShippingZone[]
+  shippingAgencies: ShippingAgencyConfig[]
   paymentMethods: PaymentMethod[]
   notifications: NotificationSettings
+}
+
+// ✅ Configuración de agencias de envío adaptada para República Dominicana
+export interface ShippingAgencyConfig {
+  id: string
+  name: string
+  code: string // 'caribe_tours', 'metro', etc.
+  supportsHomeDelivery: boolean // Si soporta puerta a puerta
+  supportsPickup: boolean // Si soporta recoger en agencia
+  isActive: boolean
+  branches: ShippingAgencyBranch[]
+  defaultPrice: number // Precio por defecto
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ShippingAgencyBranch {
+  id: string
+  name: string
+  city: string
+  address: string
+  phone?: string
+  isActive: boolean
 }
 
 export interface ShippingZone {

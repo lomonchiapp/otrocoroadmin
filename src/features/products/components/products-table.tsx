@@ -54,11 +54,7 @@ interface ProductsTableProps {
 
 const formatCurrency = (value: number | undefined) =>
   value !== undefined
-    ? new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        minimumFractionDigits: 0,
-      }).format(value)
+    ? `RD$${value.toLocaleString('es-DO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
     : '—'
 
 const statusLabels: Record<ProductStatus, string> = {

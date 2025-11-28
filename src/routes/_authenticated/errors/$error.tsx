@@ -1,44 +1,32 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { ConfigDrawer } from '@/components/config-drawer'
-import { Header } from '@/components/layout/header'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
-import { ForbiddenError } from '@/features/errors/forbidden'
-import { GeneralError } from '@/features/errors/general-error'
-import { MaintenanceError } from '@/features/errors/maintenance-error'
-import { NotFoundError } from '@/features/errors/not-found-error'
-import { UnauthorisedError } from '@/features/errors/unauthorized-error'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { ErrorComponent } from '@tanstack/react-router'
+import { PageError } from '@/features/errors/page-error'
+import { Button } from '@/components/ui/button'
+import { LayoutProvider } from '@/context/layout-provider'
+import { CommandMenu } from '@/components/command-menu'
+import { SearchInitializer } from '@/components/search-initializer'
 
 export const Route = createFileRoute('/_authenticated/errors/$error')({
-  component: RouteComponent,
+  component: RouteError,
 })
 
-function RouteComponent() {
-  const { error } = Route.useParams()
-
-  const errorMap: Record<string, React.ComponentType> = {
-    unauthorized: UnauthorisedError,
-    forbidden: ForbiddenError,
-    'not-found': NotFoundError,
-    'internal-server-error': GeneralError,
-    'maintenance-error': MaintenanceError,
-  }
-  const ErrorComponent = errorMap[error] || NotFoundError
+function RouteError() {
+  const error = Route.useParams().error
+  const router = useRouter()
 
   return (
-    <>
-      <Header fixed className='border-b'>
-        <Search />
-        <div className='ms-auto flex items-center space-x-4'>
-          <ThemeSwitch />
-          <ConfigDrawer />
-          <ProfileDropdown />
+    <LayoutProvider>
+      <div className='flex h-svh flex-col items-center justify-center gap-4'>
+        <PageError />
+        <div className='text-center'>
+          <p className='text-muted-foreground'>Error code: {error}</p>
+          <Button variant='outline' className='mt-4' onClick={() => router.history.back()}>
+            Go back
+          </Button>
         </div>
-      </Header>
-      <div className='flex-1 [&>div]:h-full'>
-        <ErrorComponent />
       </div>
-    </>
+      <SearchInitializer />
+      <CommandMenu />
+    </LayoutProvider>
   )
 }

@@ -286,19 +286,27 @@ class InvoiceService {
 
   // ============= NUMERACIÓN =============
 
-  async generateInvoiceNumber(storeId: string): Promise<string> {
+  async generateInvoiceNumber(storeId: string, posId?: string): Promise<string> {
     try {
-      const configRef = doc(db, 'invoice_configs', storeId)
+      // Si hay posId, usamos una configuración específica para ese punto de venta
+      // La colección 'invoice_configs' tendrá documentos con ID: storeId (global) o storeId_posId (caja específica)
+      const configId = posId ? `${storeId}_${posId}` : storeId
+      const configRef = doc(db, 'invoice_configs', configId)
       const configSnap = await getDoc(configRef)
 
       let config: InvoiceNumberingConfig
       const currentYear = new Date().getFullYear()
 
       if (!configSnap.exists()) {
-        // Crear configuración por defecto
+        // Si no existe configuración específica para la caja, intentamos usar la global
+        if (posId) {
+          return this.generateInvoiceNumber(storeId) // Fallback a numeración global
+        }
+
+        // Crear configuración por defecto global
         config = {
           prefix: 'INV',
-          digits: 4,
+          digits: 6,
           separator: '-',
           yearFormat: 'YYYY',
           resetYearly: true,
@@ -319,7 +327,11 @@ class InvoiceService {
       // Generar número
       const sequence = config.currentSequence.toString().padStart(config.digits, '0')
       const year = config.yearFormat === 'YY' ? currentYear.toString().slice(-2) : currentYear.toString()
-      const invoiceNumber = `${config.prefix}${config.separator}${year}${config.separator}${sequence}`
+      
+      // Formato: PREFIX-YYYY-SEQUENCE o PREFIX-SEQUENCE
+      const invoiceNumber = config.yearFormat 
+        ? `${config.prefix}${config.separator}${year}${config.separator}${sequence}`
+        : `${config.prefix}${config.separator}${sequence}`
 
       // Incrementar secuencia
       await updateDoc(configRef, {

@@ -1,4 +1,4 @@
-import { Shield, UserCheck, Users, CreditCard } from 'lucide-react'
+import { Shield, UserCheck, Users, CreditCard, Edit, ShoppingBag, User } from 'lucide-react'
 import { type UserStatus } from './schema'
 
 export const callTypes = new Map<UserStatus, string>([
@@ -16,20 +16,43 @@ export const roles = [
     label: 'Superadmin',
     value: 'superadmin',
     icon: Shield,
+    description: 'Acceso completo al sistema',
   },
   {
     label: 'Admin',
     value: 'admin',
     icon: UserCheck,
+    description: 'Administración completa excepto configuración del sistema',
   },
+  {
+    label: 'Editor',
+    value: 'editor',
+    icon: Edit,
+    description: 'Puede crear y editar productos, órdenes y contenido',
+  },
+  {
+    label: 'Vendedor',
+    value: 'vendedor',
+    icon: ShoppingBag,
+    description: 'Puede gestionar órdenes y clientes',
+  },
+  {
+    label: 'Cliente',
+    value: 'cliente',
+    icon: User,
+    description: 'Acceso limitado, solo visualización',
+  },
+  // Mantener para compatibilidad
   {
     label: 'Manager',
     value: 'manager',
     icon: Users,
+    description: 'Gestión de equipo',
   },
   {
     label: 'Cashier',
     value: 'cashier',
     icon: CreditCard,
+    description: 'Cajero',
   },
 ] as const

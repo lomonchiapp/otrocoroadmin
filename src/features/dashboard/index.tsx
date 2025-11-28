@@ -15,6 +15,7 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { useCurrentStore } from '@/stores/store-store'
 import { useProducts } from '@/hooks/use-products'
 import { useCategories } from '@/hooks/use-categories'
@@ -49,6 +50,7 @@ export function Dashboard() {
         <Header fixed>
           <Search />
           <div className='ms-auto flex items-center space-x-4'>
+            <NotificationBell />
             <ThemeSwitch />
             <ConfigDrawer />
             <ProfileDropdown />
@@ -96,6 +98,7 @@ export function Dashboard() {
       <Header fixed>
         <Search />
         <div className='ms-auto flex items-center space-x-4'>
+          <NotificationBell />
           <ThemeSwitch />
           <ConfigDrawer />
           <ProfileDropdown />

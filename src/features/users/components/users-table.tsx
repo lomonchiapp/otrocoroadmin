@@ -38,6 +38,7 @@ type DataTableProps = {
   data: User[]
   search: Record<string, unknown>
   navigate: NavigateFn
+  onRefresh?: () => void
 }
 
 export function UsersTable({ data, search, navigate }: DataTableProps) {

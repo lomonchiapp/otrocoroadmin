@@ -11,6 +11,7 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { useCurrentStore } from '@/stores/store-store'
 import { useCustomers } from '@/hooks'
@@ -105,6 +106,7 @@ export function Customers() {
       <Header fixed>
         <Search />
         <div className="ms-auto flex items-center space-x-4">
+          <NotificationBell />
           <ThemeSwitch />
           <ConfigDrawer />
           <ProfileDropdown />

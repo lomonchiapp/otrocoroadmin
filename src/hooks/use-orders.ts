@@ -20,25 +20,37 @@ export const useOrderSubscription = (storeId?: string) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!storeId) {
-      setOrders([]);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
-    // Filtrar por storeId y ordenar por fecha de creación
-    const constraints = [
-      where('storeId', '==', storeId),
-      firestoreOrderBy('createdAt', 'desc')
-    ];
+    // Construir constraints dinámicamente
+    const constraints: unknown[] = [];
+    
+    // Si hay storeId, filtrar por él O por null/undefined (órdenes sin tienda asignada)
+    // Firestore no permite múltiples where para el mismo campo con OR, así que:
+    // - Si hay storeId: obtenemos órdenes con ese storeId Y órdenes sin storeId
+    // - Si no hay storeId: obtenemos todas las órdenes
+    if (storeId) {
+      // Filtrar por storeId específico
+      constraints.push(where('storeId', '==', storeId));
+    }
+    // Si no hay storeId, no agregamos filtro y obtenemos todas las órdenes
+    
+    constraints.push(firestoreOrderBy('createdAt', 'desc'));
 
     const unsubscribe = orderService.subscribe(
       constraints,
       (incomingOrders) => {
-        setOrders(incomingOrders);
+        // Si hay storeId, también incluir órdenes sin storeId (null/undefined)
+        // para que se muestren en todas las tiendas
+        let filteredOrders = incomingOrders;
+        if (storeId) {
+          filteredOrders = incomingOrders.filter(order => 
+            !order.storeId || order.storeId === storeId
+          );
+        }
+        
+        setOrders(filteredOrders);
         setIsLoading(false);
         setError(null);
       },

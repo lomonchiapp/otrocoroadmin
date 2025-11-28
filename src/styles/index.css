@@ -122,7 +122,7 @@
 
 /* Gradientes personalizados */
 .gradient-blue-purple {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #000000 0%, #DC2626 100%);
 }
 
 .gradient-green {
